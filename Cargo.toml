@@ -1,0 +1,17 @@
+[package]
+name = "flut"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93.1"
+
+[dependencies]
+anyhow = "1.0.101"
+reedline = "0.45.0"
+
+
+[lints.rust]
+unsafe_code = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"

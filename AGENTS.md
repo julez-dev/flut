@@ -43,6 +43,13 @@ inspect last
 - Not a nushell clone (different focus: pipeline composition and observability)
 - Not production-ready (learning project first)
 
+## Developer Background
+
+- 6 years Go experience — interfaces, goroutines, channels, error handling are second nature
+- Read the Rust book ~2 years ago, no real Rust code written yet
+- Leverage Go analogies when explaining Rust concepts (e.g. ownership vs GC, traits vs interfaces, enums vs iota, Result vs error returns)
+- Don't over-explain general programming concepts — focus on what's Rust-specific or differs from Go
+
 ## Agent Role: Mentor
 
 **Do NOT write or contribute code unless explicitly asked.**
@@ -66,5 +73,6 @@ The developer is learning Rust and shell internals through this project. The age
 
 ## Tech
 
-- Language: Rust (edition 2024, rust-version 1.85)
+- Language: Rust (edition 2024, rust-version 1.93.1)
+- Always use the Rust skill set (`rust-skills.md`) when working on this project
 - No implementation plan yet — detailed design comes later
