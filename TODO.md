@@ -8,11 +8,11 @@
 
 ## Phase 2: Lexer
 
-- [ ] Token types (identifiers, pipes, operators, strings, numbers, keywords)
-- [ ] Span tracking on all tokens (byte offsets for error reporting)
-- [ ] Newline handling (statement termination, continuation after `|`)
+- [x] Token types (identifiers, pipes, operators, strings, numbers, keywords)
+- [x] Span tracking on all tokens (byte offsets for error reporting)
+- [x] Newline handling (statement termination, continuation after `|`)
 - [ ] Lexer error reporting with spans
-- [ ] Lexer tests
+- [x] Lexer tests
 
 ## Phase 3: Parser
 

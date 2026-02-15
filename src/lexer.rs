@@ -1,10 +1,19 @@
-#[derive(Debug, thiserror::Error, PartialEq)]
+#[derive(Debug, thiserror::Error, PartialEq, miette::Diagnostic)]
 pub enum LexError {
-    #[error("expected string termination for string at position {pos}")]
-    UnterminatedString { pos: usize },
+    #[error("expected string termination")]
+    #[diagnostic(help("missing closing {quote}"))]
+    UnterminatedString {
+        #[label("string starts here")]
+        pos: miette::SourceSpan,
+        quote: char,
+    },
 
-    #[error("unexpected dot number at position {pos}")]
-    UnexpectedDot { pos: usize },
+    #[error("unexpected dot in number")]
+    #[diagnostic(help("numbers can only contain one decimal point"))]
+    UnexpectedDot {
+        #[label("number starts here")]
+        pos: miette::SourceSpan,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -127,7 +136,10 @@ pub fn lex<'src>(source: &'_ str) -> Result<Vec<Token<'_>>, LexError> {
                 }
 
                 if !terminated {
-                    return Err(LexError::UnterminatedString { pos });
+                    return Err(LexError::UnterminatedString {
+                        pos: (pos, 1).into(),
+                        quote: '"',
+                    });
                 }
             }
             '#' => {
@@ -173,7 +185,10 @@ pub fn lex<'src>(source: &'_ str) -> Result<Vec<Token<'_>>, LexError> {
                         },
                     });
                 } else {
-                    return Err(LexError::UnterminatedString { pos });
+                    return Err(LexError::UnterminatedString {
+                        pos: (pos, 1).into(),
+                        quote: '\'',
+                    });
                 }
             }
             ch if ch.is_whitespace() => {}
@@ -186,7 +201,9 @@ pub fn lex<'src>(source: &'_ str) -> Result<Vec<Token<'_>>, LexError> {
                         chars.next();
                     } else if next_ch == '.' {
                         if is_float {
-                            return Err(LexError::UnexpectedDot { pos: next_pos });
+                            return Err(LexError::UnexpectedDot {
+                                pos: (pos, next_pos - pos).into(),
+                            });
                         }
                         is_float = true;
                         chars.next();
@@ -260,13 +277,25 @@ mod tests {
     #[test]
     fn unterminated_raw_string() {
         let res = lex("echo 'test");
-        assert_eq!(res, Err(LexError::UnterminatedString { pos: 5 }));
+        assert_eq!(
+            res,
+            Err(LexError::UnterminatedString {
+                pos: (5, 1).into(),
+                quote: '\''
+            })
+        );
     }
 
     #[test]
     fn unterminated_string() {
         let res = lex("echo \"test");
-        assert_eq!(res, Err(LexError::UnterminatedString { pos: 5 }));
+        assert_eq!(
+            res,
+            Err(LexError::UnterminatedString {
+                pos: (5, 1).into(),
+                quote: '"'
+            })
+        );
     }
 
     #[test]
@@ -297,7 +326,7 @@ mod tests {
     fn number_double_dot() {
         let res = lex("5.32.1");
 
-        assert_eq!(res, Err(LexError::UnexpectedDot { pos: 4 }));
+        assert_eq!(res, Err(LexError::UnexpectedDot { pos: (0, 4).into() }));
     }
 
     #[test]

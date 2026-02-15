@@ -1,4 +1,4 @@
-use crate::prompt::FlutPrompt;
+use crate::{lexer::Token, prompt::FlutPrompt};
 use reedline::{Reedline, Signal};
 
 mod lexer;
@@ -15,9 +15,13 @@ fn main() -> anyhow::Result<()> {
             Signal::CtrlC | Signal::CtrlD => {
                 break Ok(());
             }
-            Signal::Success(buffer) => {
-                println!("processed: {buffer}");
-            }
+            Signal::Success(buffer) => match lexer::lex(&buffer) {
+                Ok(tokens) => _ = tokens,
+                Err(err) => {
+                    let report = miette::Report::new(err).with_source_code(buffer);
+                    println!("{report:?}");
+                }
+            },
         }
     }
 }
