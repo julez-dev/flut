@@ -3,8 +3,8 @@
 ## Phase 1: Foundation
 
 - [x] Project setup (Cargo.toml, module structure)
-- [ ] Basic REPL loop with reedline
-- [ ] Custom prompt
+- [x] Basic REPL loop with reedline
+- [x] Custom prompt
 
 ## Phase 2: Lexer
 

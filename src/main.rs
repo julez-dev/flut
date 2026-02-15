@@ -1,6 +1,7 @@
 use crate::prompt::FlutPrompt;
 use reedline::{Reedline, Signal};
 
+mod lexer;
 mod prompt;
 
 fn main() -> anyhow::Result<()> {
