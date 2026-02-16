@@ -1,3 +1,5 @@
+use std::fmt::write;
+
 #[derive(Debug, thiserror::Error, PartialEq, miette::Diagnostic)]
 pub enum LexError {
     #[error("expected string termination")]
@@ -49,6 +51,33 @@ pub enum TokenType {
     LessEqualThan,    // <=
     LessThan,         // <
     GreaterThan,      // >
+}
+
+impl std::fmt::Display for TokenType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Identifier => write!(f, "identifier"),
+            Self::StringLiteral => write!(f, "string literal"),
+            Self::RawString => write!(f, "raw string"),
+            Self::Number(NumberType::Integer) => write!(f, "integer"),
+            Self::Number(NumberType::Float) => write!(f, "float"),
+            Self::Bar => write!(f, "'|'"),
+            Self::Newline => write!(f, "newline"),
+            Self::DollarSign => write!(f, "'$'"),
+            Self::OpenBrace => write!(f, "'{{'"),
+            Self::CloseBrace => write!(f, "'}}'"),
+            Self::OpenParenthesis => write!(f, "'('"),
+            Self::CloseParenthesis => write!(f, "')'"),
+            Self::Equal => write!(f, "'='"),
+            Self::Bang => write!(f, "'!'"),
+            Self::DoubleEqual => write!(f, "'=='"),
+            Self::NotEqual => write!(f, "'!='"),
+            Self::GreaterEqualThan => write!(f, "'>='"),
+            Self::LessEqualThan => write!(f, "'<='"),
+            Self::LessThan => write!(f, "'<'"),
+            Self::GreaterThan => write!(f, "'>'"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
