@@ -11,12 +11,12 @@
 - [x] Token types (identifiers, pipes, operators, strings, numbers, keywords)
 - [x] Span tracking on all tokens (byte offsets for error reporting)
 - [x] Newline handling (statement termination, continuation after `|`)
-- [ ] Lexer error reporting with spans
+- [x] Lexer error reporting with spans
 - [x] Lexer tests
 
 ## Phase 3: Parser
 
-- [ ] AST types (commands, pipelines, let-bindings, expressions)
+- [x] AST types (commands, pipelines, let-bindings, expressions)
 - [ ] Parse simple commands with arguments (`ls ./src`)
 - [ ] Parse pipelines (`ls | where ext == "rs"`)
 - [ ] Parse let-bindings (`let x = | where ext == "rs"`)

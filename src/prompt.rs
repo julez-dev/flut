@@ -27,3 +27,15 @@ impl Prompt for FlutPrompt {
         "".into()
     }
 }
+
+pub struct Validator;
+
+impl reedline::Validator for Validator {
+    fn validate(&self, line: &str) -> reedline::ValidationResult {
+        if line.ends_with('\\') || line.ends_with('|') {
+            reedline::ValidationResult::Incomplete
+        } else {
+            reedline::ValidationResult::Complete
+        }
+    }
+}

@@ -1,4 +1,4 @@
-use crate::prompt::FlutPrompt;
+use crate::prompt::{FlutPrompt, Validator};
 use reedline::{Reedline, Signal};
 
 mod lexer;
@@ -6,7 +6,7 @@ mod parser;
 mod prompt;
 
 fn main() -> anyhow::Result<()> {
-    let mut line_editor = Reedline::create();
+    let mut line_editor = Reedline::create().with_validator(Box::new(Validator));
     let prompt = FlutPrompt;
 
     loop {

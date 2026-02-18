@@ -51,6 +51,24 @@ enum BinaryOperationKind {
     Divide,
 }
 
+impl TryFrom<&TokenType> for BinaryOperationKind {
+    type Error = ParseError;
+    fn try_from(value: &TokenType) -> Result<Self, Self::Error> {
+        match value {
+            TokenType::DoubleEqual => Ok(Self::Equal),
+            TokenType::NotEqual => Ok(Self::NotEqual),
+            TokenType::LessThan => Ok(Self::LessThan),
+            TokenType::GreaterThan => Ok(Self::GreaterThan),
+            TokenType::LessEqualThan => Ok(Self::LessEqual),
+            TokenType::GreaterEqualThan => Ok(Self::GreaterEqual),
+            _ => Err(ParseError::UnexpectedToken {
+                got: value.to_string(),
+                want: "operator".into(),
+            }),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 enum Statement {
     Pipeline(Vec<Command>),
@@ -68,7 +86,48 @@ impl<'src> Parser<'src> {
     }
 
     pub fn parse(&mut self) -> Result<Vec<Statement>, ParseError> {
-        Ok(Vec::new())
+        let mut statements = vec![];
+
+        while let Some(token) = self.peek() {
+            match &token.kind {
+                TokenType::Newline => {
+                    self.advance();
+                }
+                TokenType::Identifier if token.text == "let" => {
+                    statements.push(self.parse_let()?);
+                }
+                _ => {
+                    statements.push(self.parse_pipeline()?);
+                }
+            }
+        }
+
+        Ok(statements)
+    }
+
+    fn parse_pipeline(&mut self) -> Result<Statement, ParseError> {
+        let mut commands: Vec<Command> = vec![self.parse_command()?];
+
+        while self.peek().is_some_and(|t| t.kind == TokenType::Bar) {
+            self.advance();
+            commands.push(self.parse_command()?);
+        }
+
+        Ok(Statement::Pipeline(commands))
+    }
+
+    fn parse_let(&mut self) -> Result<Statement, ParseError> {
+        self.expect(TokenType::Identifier)?;
+
+        let var_name = self.expect(TokenType::Identifier)?.text.to_string();
+        self.expect(TokenType::Equal)?;
+
+        let expr = self.parse_expression(0)?;
+
+        Ok(Statement::LetBinding {
+            name: var_name,
+            value: expr,
+        })
     }
 
     fn parse_command(&mut self) -> Result<Command, ParseError> {
@@ -79,33 +138,9 @@ impl<'src> Parser<'src> {
         while let Some(token) = self.peek() {
             match &token.kind {
                 TokenType::Newline | TokenType::Bar => break,
-                TokenType::Identifier => {
-                    args.push(Expression::Identifier(token.text.to_string()));
-                    self.advance().unwrap();
-                }
-                TokenType::RawString | TokenType::StringLiteral => {
-                    args.push(Expression::StringLiteral(token.text.to_string()));
-                    self.advance().unwrap();
-                }
-                TokenType::Number(number_type) => {
-                    let number = if *number_type == NumberType::Float {
-                        NumberLiteral::Float(token.text.parse().unwrap())
-                    } else {
-                        NumberLiteral::Integer(token.text.parse().unwrap())
-                    };
-
-                    args.push(Expression::Number(number));
-                    self.advance().unwrap();
-                }
-                TokenType::DollarSign => {
-                    let exp = self.parse_variable()?;
-                    args.push(exp);
-                }
                 _ => {
-                    return Err(ParseError::UnexpectedToken {
-                        got: token.kind.to_string(),
-                        want: "valid arg token".into(),
-                    });
+                    let exp = self.parse_expression(0)?;
+                    args.push(exp);
                 }
             }
         }
@@ -114,6 +149,32 @@ impl<'src> Parser<'src> {
             name: command_name_token,
             args,
         })
+    }
+
+    fn parse_expression(&mut self, min_power: u8) -> Result<Expression, ParseError> {
+        let mut left = self.parse_atom()?;
+
+        while let Some(token) = self.peek() {
+            let binding_power = binding_power(&token.kind);
+
+            match binding_power {
+                None => break,
+                Some(power) if power < min_power => break,
+                Some(power) => {
+                    let op = BinaryOperationKind::try_from(&token.kind)?;
+                    self.advance();
+                    let right = self.parse_expression(power + 1)?;
+
+                    left = Expression::BinaryOperation {
+                        op,
+                        left: Box::new(left),
+                        right: Box::new(right),
+                    }
+                }
+            }
+        }
+
+        Ok(left)
     }
 
     fn parse_variable(&mut self) -> Result<Expression, ParseError> {
@@ -128,6 +189,48 @@ impl<'src> Parser<'src> {
         }
 
         Ok(Expression::Variable(name.text.to_string()))
+    }
+
+    fn parse_atom(&mut self) -> Result<Expression, ParseError> {
+        if self.peek().is_some_and(|t| t.kind == TokenType::DollarSign) {
+            return self.parse_variable();
+        }
+
+        match self.advance() {
+            None => {
+                return Err(ParseError::MissingToken {
+                    missing: "Identifier".into(),
+                });
+            }
+            Some(token) => match &token.kind {
+                TokenType::Identifier => {
+                    return Ok(Expression::Identifier(token.text.to_string()));
+                }
+                TokenType::RawString | TokenType::StringLiteral => {
+                    return Ok(Expression::StringLiteral(token.text.to_string()));
+                }
+                TokenType::Number(number_type) => {
+                    let number = if *number_type == NumberType::Float {
+                        NumberLiteral::Float(token.text.parse().unwrap())
+                    } else {
+                        NumberLiteral::Integer(token.text.parse().unwrap())
+                    };
+
+                    return Ok(Expression::Number(number));
+                }
+                TokenType::OpenParenthesis => {
+                    let expr = self.parse_expression(0)?;
+                    self.expect(TokenType::CloseParenthesis)?;
+                    Ok(expr)
+                }
+                _ => {
+                    return Err(ParseError::UnexpectedToken {
+                        got: token.kind.to_string(),
+                        want: "valid arg token".into(),
+                    });
+                }
+            },
+        }
     }
 
     fn peek(&self) -> Option<&Token<'src>> {
@@ -153,6 +256,18 @@ impl<'src> Parser<'src> {
                 missing: expected.to_string(),
             }),
         }
+    }
+}
+
+fn binding_power(kind: &TokenType) -> Option<u8> {
+    match kind {
+        TokenType::DoubleEqual
+        | TokenType::NotEqual
+        | TokenType::GreaterThan
+        | TokenType::GreaterEqualThan
+        | TokenType::LessEqualThan
+        | TokenType::LessThan => Some(1),
+        _ => None,
     }
 }
 
@@ -189,6 +304,16 @@ mod tests {
     }
 
     #[test]
+    fn pipeline_parsing() {
+        let tokens = lexer::lex("ls ./src | where ext == \"rs\" | take 5").unwrap();
+
+        let mut parser = Parser::new(&tokens);
+        let res = parser.parse_pipeline().unwrap();
+        dbg!(&res);
+
+        assert_eq!(res, Statement::Pipeline(todo!()));
+    }
+    #[test]
     fn command_parsing() {
         let tokens = lexer::lex("ls ./src").unwrap();
         let mut parser = Parser::new(&tokens);
@@ -216,5 +341,73 @@ mod tests {
                 args: vec![Expression::Variable("var".to_string())]
             }
         );
+    }
+
+    #[test]
+    fn simple_binop() {
+        let tokens = lexer::lex("a == b != c").unwrap();
+        let mut parser = Parser::new(&tokens);
+        let expr = parser.parse_expression(0).unwrap();
+        dbg!(&expr);
+    }
+
+    #[test]
+    fn simple_binop_variable() {
+        let tokens = lexer::lex("$x == 10").unwrap();
+        let mut parser = Parser::new(&tokens);
+        let expr = parser.parse_expression(0).unwrap();
+        dbg!(&expr);
+    }
+
+    #[test]
+    fn parse_full_program() {
+        let input = "let x = 5\nls ./src | where ext == \"rs\"";
+        let tokens = lexer::lex(input).unwrap();
+        let mut parser = Parser::new(&tokens);
+        let stmts = parser.parse().unwrap();
+
+        // produces
+        //
+        /*
+        * [src/parser.rs:369:9] &stmts = [
+            LetBinding {
+                name: "x",
+                value: Number(
+                    Integer(
+                        5,
+                    ),
+                ),
+            },
+            Pipeline(
+                [
+                    Command {
+                        name: "ls",
+                        args: [
+                            Identifier(
+                                "./src",
+                            ),
+                        ],
+                    },
+                    Command {
+                        name: "where",
+                        args: [
+                            BinaryOperation {
+                                op: Equal,
+                                left: Identifier(
+                                    "ext",
+                                ),
+                                right: StringLiteral(
+                                    "rs",
+                                ),
+                            },
+                        ],
+                    },
+                ],
+            ),
+        ]
+        *
+        */
+
+        dbg!(&stmts);
     }
 }
