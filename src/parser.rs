@@ -61,6 +61,8 @@ impl TryFrom<&TokenType> for BinaryOperationKind {
             TokenType::GreaterThan => Ok(Self::GreaterThan),
             TokenType::LessEqualThan => Ok(Self::LessEqual),
             TokenType::GreaterEqualThan => Ok(Self::GreaterEqual),
+            TokenType::Multiply => Ok(Self::Multiply),
+            TokenType::Plus => Ok(Self::Add),
             _ => Err(ParseError::UnexpectedToken {
                 got: value.to_string(),
                 want: "operator".into(),
@@ -267,6 +269,8 @@ fn binding_power(kind: &TokenType) -> Option<u8> {
         | TokenType::GreaterEqualThan
         | TokenType::LessEqualThan
         | TokenType::LessThan => Some(1),
+        TokenType::Plus => Some(2),
+        TokenType::Multiply => Some(3),
         _ => None,
     }
 }
@@ -361,7 +365,7 @@ mod tests {
 
     #[test]
     fn parse_full_program() {
-        let input = "let x = 5\nls ./src | where ext == \"rs\"";
+        let input = "let x = 5\nls ./src | where ext == \"rs\" && size > 10 | take 3";
         let tokens = lexer::lex(input).unwrap();
         let mut parser = Parser::new(&tokens);
         let stmts = parser.parse().unwrap();
@@ -409,5 +413,14 @@ mod tests {
         */
 
         dbg!(&stmts);
+    }
+
+    #[test]
+    fn arithmetic_precedence() {
+        // should parse as 1 + (2 * 3), not (1 + 2) * 3
+        let tokens = lexer::lex("1 + 2 * 3").unwrap();
+        let mut parser = Parser::new(&tokens);
+        let expr = parser.parse_expression(0).unwrap();
+        dbg!(&expr);
     }
 }

@@ -51,6 +51,10 @@ pub enum TokenType {
     LessEqualThan,    // <=
     LessThan,         // <
     GreaterThan,      // >
+
+    // Arithmetic
+    Plus,
+    Multiply,
 }
 
 impl std::fmt::Display for TokenType {
@@ -76,6 +80,8 @@ impl std::fmt::Display for TokenType {
             Self::LessEqualThan => write!(f, "'<='"),
             Self::LessThan => write!(f, "'<'"),
             Self::GreaterThan => write!(f, "'>'"),
+            Self::Multiply => write!(f, "'*'"),
+            Self::Plus => write!(f, "'+'"),
         }
     }
 }
@@ -130,6 +136,8 @@ pub fn lex<'src>(source: &'_ str) -> Result<Vec<Token<'_>>, LexError> {
             '$' => tokens.push(Token::new(source, TokenType::DollarSign, pos, pos + 1)),
             '{' => tokens.push(Token::new(source, TokenType::OpenBrace, pos, pos + 1)),
             '}' => tokens.push(Token::new(source, TokenType::CloseBrace, pos, pos + 1)),
+            '+' => tokens.push(Token::new(source, TokenType::Plus, pos, pos + 1)),
+            '*' => tokens.push(Token::new(source, TokenType::Multiply, pos, pos + 1)),
             '(' => tokens.push(Token::new(source, TokenType::OpenParenthesis, pos, pos + 1)),
             ')' => tokens.push(Token::new(
                 source,
